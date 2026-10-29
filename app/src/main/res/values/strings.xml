@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LibreDescargas</string>
+    <string name="back">Atrás</string>
+    <string name="home">Inicio</string>
+    <string name="menu">Menú</string>
+    <string name="url_hint">Buscar o escribir dirección</string>
+    <string name="download">Descargar</string>
+    <string name="channel_name">Descargas</string>
+</resources>
