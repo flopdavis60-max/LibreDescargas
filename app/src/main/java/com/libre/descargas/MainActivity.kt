@@ -14,6 +14,7 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -41,12 +42,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.net.URLEncoder
 
 class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val HOME = "file:///android_asset/home.html"
+        private const val TV = "file:///android_asset/tv.html"
+        private const val ASSETS = "file:///android_asset/"
         private const val SEARCH = "https://duckduckgo.com/?q="
         private const val PREFS = "ajustes"
         private const val KEY_LAST_UPDATE = "ultima_actualizacion_motor"
@@ -58,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fab: ExtendedFloatingActionButton
     private lateinit var fullscreen: FrameLayout
 
+    @Volatile private var currentUrl: String? = null
     private var customView: View? = null
     private var customCallback: WebChromeClient.CustomViewCallback? = null
 
@@ -144,6 +150,7 @@ class MainActivity : AppCompatActivity() {
             javaScriptCanOpenWindowsAutomatically = false
             if (Build.VERSION.SDK_INT >= 26) safeBrowsingEnabled = false
         }
+        web.addJavascriptInterface(TvBridge(), "Android")
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, false)
 
@@ -157,6 +164,10 @@ class MainActivity : AppCompatActivity() {
                 if (scheme == "http" || scheme == "https") {
                     // Bloquea redirecciones a páginas de publicidad
                     return AdBlocker.isBlocked(request.url)
+                }
+                if (scheme == "file") {
+                    // Solo páginas internas de la app (inicio y TV en vivo)
+                    return !request.url.toString().startsWith(ASSETS)
                 }
                 if (scheme == "intent") {
                     // Abre la versión web en vez de saltar a otra app
@@ -232,6 +243,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showUrl(url: String?) {
+        currentUrl = url
         if (urlBar.hasFocus()) return
         val isHome = url == null || url.startsWith("file:")
         urlBar.setText(if (isHome) "" else url)
@@ -314,6 +326,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showMenu(anchor: View) {
         val pm = PopupMenu(this, anchor)
+        pm.menu.add(0, 6, 0, "📺 TV en vivo")
         pm.menu.add(0, 1, 0, "Recargar")
         pm.menu.add(0, 2, 1, "Mis descargas")
         pm.menu.add(0, 3, 2, "Actualizar motor de descargas")
@@ -321,6 +334,7 @@ class MainActivity : AppCompatActivity() {
         pm.menu.add(0, 5, 4, "Borrar historial y sesiones")
         pm.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                6 -> web.loadUrl(TV)
                 1 -> web.reload()
                 2 -> try {
                     startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS))
@@ -348,6 +362,35 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) { runCatching(block) }
             toast(result.getOrElse { "Error: ${it.message ?: "sin conexión"}" })
+        }
+    }
+
+    // ---------- TV en vivo ----------
+
+    /** Puente para tv.html. Solo responde a páginas internas de la app, nunca a sitios web. */
+    inner class TvBridge {
+        private fun allowed() = currentUrl?.startsWith(ASSETS) == true
+
+        @JavascriptInterface
+        fun fetch(url: String): String {
+            if (!allowed()) return "ERROR:no permitido"
+            if (!(url.startsWith("https://") || url.startsWith("http://"))) return "ERROR:dirección no válida"
+            return try {
+                val conn = URL(url).openConnection() as HttpURLConnection
+                conn.connectTimeout = 15_000
+                conn.readTimeout = 30_000
+                conn.instanceFollowRedirects = true
+                conn.setRequestProperty("User-Agent", "LibreDescargas")
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } catch (e: Exception) {
+                "ERROR:" + (e.message ?: "sin conexión")
+            }
+        }
+
+        @JavascriptInterface
+        fun play(url: String, name: String, ua: String, referrer: String) {
+            if (!allowed()) return
+            runOnUiThread { PlayerActivity.start(this@MainActivity, url, name, ua, referrer) }
         }
     }
 

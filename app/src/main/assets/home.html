@@ -23,7 +23,13 @@
            color:var(--text); font-size:12px; }
   .ico { width:60px; height:60px; border-radius:18px; display:flex; align-items:center; justify-content:center;
          color:#fff; font-weight:700; font-size:22px; }
-  .tip { margin-top:36px; max-width:480px; background:var(--card); border-radius:16px; padding:16px 18px;
+  a.tv { margin-top:28px; width:100%; max-width:480px; display:flex; align-items:center; gap:14px; text-decoration:none;
+          color:var(--text); background:var(--card); border-radius:16px; padding:14px 18px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  a.tv small { color:var(--muted); }
+  .tvico { width:48px; height:48px; border-radius:14px; background:var(--brand); display:flex; align-items:center;
+           justify-content:center; font-size:24px; flex:none; }
+  .arrow { margin-left:auto; font-size:26px; color:var(--muted); }
+  .tip { margin-top:24px; max-width:480px; background:var(--card); border-radius:16px; padding:16px 18px;
          font-size:14px; line-height:1.5; color:var(--muted); }
   .tip b { color:var(--text); }
 </style>
@@ -42,6 +48,8 @@
     <a class="tile" href="https://m.facebook.com"><div class="ico" style="background:#1877F2">f</div>Facebook</a>
     <a class="tile" href="https://www.tiktok.com"><div class="ico" style="background:#111">♪</div>TikTok</a>
   </div>
+
+  <a class="tv" href="tv.html"><span class="tvico">📺</span><span><b>TV en vivo</b><br><small>Deportes HD, noticias y canales gratis</small></span><span class="arrow">›</span></a>
 
   <div class="tip">
     <b>Cómo descargar:</b> abre el video y pulsa el botón rojo <b>Descargar</b>.<br>
